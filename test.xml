@@ -1,12 +1,13 @@
 <config version="1.0">
     <backup>
-        <destination>./backup/</destination>
+        <destination>./bkp/</destination>
         <!-- currently just a full backup is supported.. Later there will also be recursive -->
         <mode>full</mode>
+        <log>bkp.log</log>
     </backup>
     <directories>
-        <directory>/home/philipp</directory>
-        <directory>/srv</directory>
-        <directory>/opt</directory>
+        <directory>/downloads/</directory>
+        <directory>/srv/</directory>
+        <directory>/opt/</directory>
     </directories>
 </config>
