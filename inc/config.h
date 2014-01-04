@@ -17,6 +17,7 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+#include "../inc/filehandler.h"
 #include <string.h>
 
 #include <libxml/parser.h>
@@ -32,6 +33,15 @@ typedef enum bck_mode {
     MODE_FULL
 } BCK_MODE;
 
+
+typedef enum bck_type {
+    TYPE_UNSET=0,
+    TYPE_UNCOMPRESSED,
+    TYPE_COMPRESSED
+} BCK_TYPE;
+
+class FileHandler;
+
 class Config {
     private:
         xmlDocPtr doc;
@@ -42,17 +52,21 @@ class Config {
         void reset();
 
         char* backup_dest;
-        BCK_MODE mode;
+        BCK_MODE mode; 
+        BCK_TYPE type;
 
         vector<const char*> directories;
     public:
         Logger log;
+        FileHandler *FH;
 
         bool load(const char* file);
         void backupDirectories();
 
         const char* getBackupDestination() { return (const char*)backup_dest; }
-
+    
+        BCK_TYPE getType() { return type; }
+    
         Config() {
             reset();
         }

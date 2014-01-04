@@ -34,92 +34,6 @@
 #warning DOES NOT WORK RIGHT!
 #endif
 
-#warning links, ....
-static bool backup(Config *c, const char* src, const char* dest) {
-    int sfd, dfd;
-    struct stat attr;
-
-    #ifdef DEBUG
-    printf("DEBUG: Copying <%s#%s>\n\r", src, dest);
-    #endif
-
-    if((sfd = open(src, O_RDONLY)) < 0) {
-         c->log.Log(LogError, "Error opening file <%s>\n\r", src);
-         return false;
-    }
-    
-    if(lstat(src, &attr)) {
-        close(sfd);
-        c->log.Log(LogError, "Error getting file attributes for <%s>\n\r", src);
-        return false;
-    }
-
-    if((attr.st_mode & S_IFMT) != S_IFREG) {
-        close(sfd);
-        ERRWR("Only regular files are supported!\n\r");
-    }
-
-    if((dfd = creat(dest, attr.st_mode)) < 0) {
-        close(sfd);
-        c->log.Log(LogError, "Error creating file <%s>\n\r", dest);
-        return false;
-    }
-
-#warning Just works for linux
-    if((sendfile(dfd, sfd, NULL, attr.st_size)) != attr.st_size) {
-        close(dfd);
-        close(sfd);
-        c->log.Log(LogError, "Error writing file <%s>!\n\r", dest);
-        return false;
-    }
-   
-    close(dfd);
-    close(sfd);
-
-    struct utimbuf ut;
-    ut.modtime = attr.st_mtime;
-    ut.actime = 0;
-
-    if(utime(dest, &ut) != 0)
-         c->log.Log(LogWarning, "Couldn't set correct modification date for <%s>!\n\r", dest);
-
-    return true;
-}
-
-#warning links, ...
-// just create a new directory with the same rigths
-static bool copyDir(Config *c, const char* src, const char* dest) {
-    struct stat attr;
-
-    #ifdef DEBUG
-    printf("DEBUG: Creating directory <%s#%s>\n\r", src, dest);
-    #endif
-
-    if(lstat(src, &attr)) {
-        c->log.Log(LogError, "Error getting file attributes <%s>\n\r", src);
-        return false;
-    }
-
-    if((attr.st_mode & S_IFMT) != S_IFDIR) {
-        c->log.Log(LogError, "Not a directory <%s>!\n\r", src);
-        return false;
-    }
-
-    if(mkdir(dest, attr.st_mode) != 0) {
-        c->log.Log(LogError, "Couldn't create directory <%s>\n\r", dest);
-        return false;
-    }
-
-    struct utimbuf ut;
-    ut.modtime = attr.st_mtime;
-    ut.actime = 0;
-
-    if(utime(dest, &ut) != 0)
-         c->log.Log(LogWarning, "Couldn't set correct modification date for <%s>!\n\r", dest);
-
-    return true;
-}
-
 FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
     struct stat attr;
     
@@ -132,20 +46,21 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
     #endif
 
     if(isRootDirectory) {
-#warning CHECK POINTER MEM
-        char* tmp = (char*)malloc(sizeof(char) * (strlen(c->getBackupDestination()) + strlen(directory) + 2));
-        strcpy(tmp, c->getBackupDestination());
-        strcat(tmp, "/");
-        strcat(tmp, directory);
+        char* tmp = (char*)malloc(sizeof(char) * (strlen(directory) + 1));
+        if(tmp == NULL) {
+            c->log.Log(LogError, "Error allocating memory!\n");
+            return ;
+        }
+        strcpy(tmp, directory);
 
         int maxlen = strlen(tmp);
-        int cur = strlen(c->getBackupDestination()) + (directory[0] == '/' ? 2 : 1);
+        int cur = 1;
 
         while(cur < maxlen) {
             cur = strchr(tmp+cur, '/') - tmp;
             if(cur >= 0)
                 tmp[cur] = 0;
-            copyDir(c, tmp + strlen(c->getBackupDestination()), tmp);
+            c->FH->copyDirectory(tmp, tmp);
 
             if(cur < 0)
                 break;
@@ -180,21 +95,21 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
             }
             
             strcpy(src, directory);
-            strcat(src, "/");
+            if(directory[strlen(directory)-1] != '/')
+                strcat(src, "/");
             strcat(src, e->d_name);
 
 
-            char* dest = (char*)malloc(sizeof(char) *( strlen(c->getBackupDestination()) + strlen(e->d_name) + strlen(directory) + 3));
+            char* dest = (char*)malloc(sizeof(char) *(strlen(e->d_name) + strlen(directory) + 2));
             if(dest == NULL) {
                 free(src);
                 c->log.Log(LogError, "Error allocating memory!\n");
                 return ;
             }
             
-            strcpy(dest, c->getBackupDestination());
-            strcat(dest, "/");
-            strcat(dest, directory);
-            strcat(dest, "/");
+            strcpy(dest, directory);
+            if(directory[strlen(directory)-1] != '/')
+                strcat(dest, "/");
             strcat(dest, e->d_name);
 
 #warning OPTIMIZE
@@ -211,10 +126,9 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
             #endif
 // END OPTIMIZE
 
-//            printf("%s (%i) - %li\n", src, e->d_type, buf.st_size);
             switch(e->d_type) {
                 case DT_DIR: {
-                    copyDir(c, src, dest);
+                    c->FH->copyDirectory(src, dest);
                     FIterator f(c, src, false);
                     #ifdef SIZE
                     size += f.getSize();
@@ -223,8 +137,7 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
                 }
                 case DT_REG:
                 case DT_LNK:
-                    backup(c, src, dest);
- //                   printf("Reg\n\r");  
+                    c->FH->copyFile(src, dest);
                     break;                
                 default:
                     #warning IMPLEMENT

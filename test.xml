@@ -1,13 +1,12 @@
 <config version="1.0">
     <backup>
-        <destination>./bkp/</destination>
+        <destination>./test.tar.gz</destination>
         <!-- currently just a full backup is supported.. Later there will also be recursive -->
         <mode>full</mode>
+        <type>compressed</type>
         <log>bkp.log</log>
     </backup>
     <directories>
-        <directory>/downloads/</directory>
-        <directory>/srv/</directory>
         <directory>/opt/</directory>
     </directories>
 </config>

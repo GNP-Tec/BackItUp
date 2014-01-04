@@ -37,6 +37,7 @@ void Config::reset() {
     backup_dest = NULL;
     doc = NULL;
     mode = MODE_UNSET;
+    type = TYPE_UNSET;
 
     while(directories.size() > 0) {
         void* buf = (void*)directories[directories.size()-1];
@@ -116,6 +117,18 @@ bool Config::load(const char* file) {
                 
                 if(strcmp((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1), "full") == 0)
                     mode = MODE_FULL;
+            } else if(strcmp((const char*)cur->name, "type") == 0) {
+                if(strcmp((const char*)cur->parent->name, "backup") != 0) {
+                    ERRWR("The <type> node must be inside of the <backup> node!\n\r");                
+                }                 
+ 
+                if(type != TYPE_UNSET)
+                    ERRWR("Only one <type> node is allowed!\n\r");
+                
+                if(strcmp((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1), "uncompressed") == 0)
+                    type = TYPE_UNCOMPRESSED;
+                else if(strcmp((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1), "compressed") == 0)
+                    type = TYPE_COMPRESSED;
             } else if(strcmp((const char*)cur->name, "log") == 0) {
                 if(strcmp((const char*)cur->parent->name, "backup") != 0) {
                     ERRWR("The <log> node must be inside of the <backup> node!\n\r");                
@@ -123,7 +136,6 @@ bool Config::load(const char* file) {
                 
                 log.addOutput(LogFile, LogInfo, (const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1), strlen((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1)));
             }
-
     
 #warning Check if EVERYTHING is set correctly      
             #ifdef DEBUG
@@ -159,16 +171,24 @@ bool Config::load(const char* file) {
         log.Log(LogInfo, "\t#%i\t%s\n\r", i, directories[i]);
     }
 
-    return true;    
+    FH = new FileHandler();
+    return true;
 }
 
 void Config::backupDirectories() {
-    if(mkdir(getBackupDestination(), 0755) != 0) {
-        log.Log(LogError, "Couldn't create directory <%s>\n\r", getBackupDestination());   
+    if(!FH->Init(this)) {
+        log.Log(LogError, "Error initializing the filehandler!\n\r");
+        return ;
+    }
+    if(type == TYPE_UNCOMPRESSED) {
+        if(mkdir(getBackupDestination(), 0755) != 0) {
+            log.Log(LogError, "Couldn't create directory <%s>\n\r", getBackupDestination());   
+        }
     }
 
    for(unsigned int i=0; i<directories.size(); i++) {
         log.Log(LogInfo, "Backing up #%i\t%s\n\r", i, directories[i]);
         FIterator f(this, directories[i]);
     }
+    FH->Finalize();
 }
