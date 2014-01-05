@@ -17,6 +17,7 @@
 #include "../inc/config.h"
 #include "../inc/fiterator.h"
 #include <sys/stat.h>
+#include <time.h>
 
 #define ERRWR(x...)    { fprintf(stderr, x); return false; }
 
@@ -106,7 +107,12 @@ bool Config::load(const char* file) {
                         
                 if(backup_dest != NULL)
                     ERRWR("Only one backup destination is allowed!\n\r");
-                backup_dest = strdup((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
+                //backup_dest = strdup((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
+                backup_dest = (char*)malloc(strlen((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1)) + 50);
+                if(backup_dest == NULL) {
+                    ERRWR("Error allocating memory!\n\r");
+                }
+                strcpy(backup_dest, (const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
             } else if(strcmp((const char*)cur->name, "mode") == 0) {
                 if(strcmp((const char*)cur->parent->name, "backup") != 0) {
                     ERRWR("The <mode> node must be inside of the <backup> node!\n\r");                
@@ -165,6 +171,7 @@ bool Config::load(const char* file) {
     log.Log(LogInfo, "Summary:\n\r\tConfigfile:\t\t%s (v%s)\n\r", configfile, configversion);
     log.Log(LogInfo, "\tBackup Destination:\t%s\n\r", backup_dest);
     log.Log(LogInfo, "\tMode:\t\t\t%s\n\r", mode == MODE_FULL ? "full" : "??");
+    log.Log(LogInfo, "\tType:\t\t\t%s\n\r", type == TYPE_UNCOMPRESSED ? "uncompressed" : (type == TYPE_COMPRESSED ? "compressed" : "??"));
 
     log.Log(LogInfo, "\n\r\tFolders to save:\n\r");
     for(unsigned int i=0; i<directories.size(); i++) {
@@ -176,17 +183,34 @@ bool Config::load(const char* file) {
 }
 
 void Config::backupDirectories() {
+    if(mkdir(getBackupDestination(), 0755) != 0) {
+        log.Log(LogError, "Couldn't create directory <%s>\n\r", getBackupDestination());   
+    }
+
+    char buf[200];
+    time_t t = time(0);
+    struct tm* tmp = localtime(&t);
+    strftime(buf, sizeof(buf), "%Y%m%d-%H%M%S", tmp);
+
+    if(backup_dest[strlen(backup_dest)-1] != '/')
+        strcat(backup_dest, "/");
+    strcat(backup_dest, buf);
+
+    if(type == TYPE_UNCOMPRESSED) {
+        strcat(backup_dest, "/");
+        if(mkdir(getBackupDestination(), 0755) != 0) {
+            log.Log(LogError, "Couldn't create directory <%s>\n\r", getBackupDestination());   
+        }
+    } else if(type == TYPE_COMPRESSED) {
+        strcat(backup_dest, ".tar.gz");
+    }
+
     if(!FH->Init(this)) {
         log.Log(LogError, "Error initializing the filehandler!\n\r");
         return ;
     }
-    if(type == TYPE_UNCOMPRESSED) {
-        if(mkdir(getBackupDestination(), 0755) != 0) {
-            log.Log(LogError, "Couldn't create directory <%s>\n\r", getBackupDestination());   
-        }
-    }
 
-   for(unsigned int i=0; i<directories.size(); i++) {
+    for(unsigned int i=0; i<directories.size(); i++) {
         log.Log(LogInfo, "Backing up #%i\t%s\n\r", i, directories[i]);
         FIterator f(this, directories[i]);
     }

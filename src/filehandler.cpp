@@ -37,6 +37,7 @@ bool FileHandler::Init(Config* conf) {
     if(c->getType() == TYPE_UNCOMPRESSED) {
         return true;
     } else if(c->getType() == TYPE_COMPRESSED) {
+#warning CHECK IF ERROR
         a = archive_write_new();
         archive_write_add_filter_gzip(a);
         archive_write_set_format_pax_restricted(a);
