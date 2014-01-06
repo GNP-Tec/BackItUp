@@ -1,6 +1,6 @@
 <config version="1.0">
     <backup>
-        <destination>./test.tar.gz</destination>
+        <destination>./bkp</destination>
         <!-- currently just a full backup is supported.. Later there will also be recursive -->
         <mode>full</mode>
         <type>compressed</type>

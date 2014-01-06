@@ -129,7 +129,6 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
             #if SIZE
             size += attr.st_size;
             #endif
-// END OPTIMIZE
 
             switch(e->d_type) {
                 case DT_DIR: {
@@ -142,6 +141,8 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
                 }
                 case DT_REG:
                 case DT_LNK:
+                case DT_CHR:
+                case DT_BLK:
                     c->FH->copyFile(src, dest, &buf);
                     break;                
                 default:

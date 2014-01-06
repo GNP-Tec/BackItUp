@@ -83,6 +83,10 @@ bool FileHandler::copyDirectory(const char* src, const char* dest, struct stat *
             return false;
         }
 
+        if(chown(temp, attr->st_uid, attr->st_gid) != 0) {
+            c->log.Log(LogWarning, "Couldn't set correct UID & GID of <%s>\n\r", temp);
+        }
+
         struct utimbuf ut;
         ut.modtime = attr->st_mtime;
         ut.actime = 0;
@@ -104,6 +108,8 @@ bool FileHandler::copyDirectory(const char* src, const char* dest, struct stat *
         archive_entry_set_filetype(entry, AE_IFDIR);
         archive_entry_set_perm(entry, attr->st_mode & 0777);
         archive_entry_set_mtime(entry, attr->st_mtime, 0);
+        archive_entry_set_uid(entry, attr->st_uid);
+        archive_entry_set_gid(entry, attr->st_gid);
         if(archive_write_header(a, entry) != ARCHIVE_OK) {
             archive_entry_free(entry);
             c->log.Log(LogError, "Error creating directory in archive <%s>\n\r", dest);
@@ -158,6 +164,10 @@ bool FileHandler::copyFile(const char* src, const char* dest, struct stat* attr)
                 return false;
             }
            
+            if(fchown(dfd, attr->st_uid, attr->st_gid) != 0) {
+                c->log.Log(LogWarning, "Couldn't set correct UID & GID of <%s>\n\r", temp);
+            }
+
             close(dfd);
             close(sfd);
             struct utimbuf ut;
@@ -166,14 +176,29 @@ bool FileHandler::copyFile(const char* src, const char* dest, struct stat* attr)
 
             if(utime(temp, &ut) != 0)
                  c->log.Log(LogWarning, "Couldn't set correct modification date for <%s>!\n\r", temp);
+
         } else if((attr->st_mode & S_IFMT) == S_IFLNK) {
             buf[readlink(src, buf, sizeof(buf))] = 0;
             if(symlink(buf, temp) != 0) {
                 c->log.Log(LogError, "Error creating symlink <%s>\n\r", temp);
                 return false;
             }
+
+            if(lchown(temp, attr->st_uid, attr->st_gid) != 0) {
+                c->log.Log(LogWarning, "Couldn't set correct UID & GID of <%s>\n\r", temp);
+            }
+        } else if((attr->st_mode & S_IFMT) == S_IFCHR || (attr->st_mode & S_IFMT) == S_IFBLK) {
+            if(mknod(temp, attr->st_mode, attr->st_rdev) != 0) {
+                c->log.Log(LogError, "Error creating device file <%s>\n\r", temp);
+                perror("X:\n\r");
+                return false;
+            }
+
+            if(chown(temp, attr->st_uid, attr->st_gid) != 0) {
+                c->log.Log(LogWarning, "Couldn't set correct UID & GID of <%s>\n\r", temp);
+            }
         } else {
-            c->log.Log(LogError, "Only regular and link files are supported <%s>!\n\r", src);
+            c->log.Log(LogError, "Only regular, link and device files are supported <%s>!\n\r", src);
             return false;
         }
 
@@ -189,15 +214,17 @@ bool FileHandler::copyFile(const char* src, const char* dest, struct stat* attr)
         }
         archive_entry_set_pathname(entry, dest);
         archive_entry_set_size(entry, attr->st_size);
-        archive_entry_set_perm(entry, attr->st_mode && 0777);
+        archive_entry_set_perm(entry, attr->st_mode);
         archive_entry_set_mtime(entry, attr->st_mtime, 0);
+        archive_entry_set_uid(entry, attr->st_uid);
+        archive_entry_set_gid(entry, attr->st_gid);
         if((attr->st_mode & S_IFMT) == S_IFREG) {
             archive_entry_set_filetype(entry, AE_IFREG);
         } else if((attr->st_mode & S_IFMT) == S_IFLNK) {
             archive_entry_set_filetype(entry, AE_IFLNK);
             buf[readlink(src, buf, sizeof(buf))] = 0;
             archive_entry_set_symlink(entry, buf);
-        } else {
+        }else {
             c->log.Log(LogError, "Only regular and link files are supported <%s>!\n\r", src);
             return false;
         }
