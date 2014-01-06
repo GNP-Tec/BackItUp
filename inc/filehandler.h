@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <archive.h>
+#include <sys/stat.h>
 #include "../inc/config.h"
 
 class Config;
@@ -26,8 +27,8 @@ class FileHandler {
     public:
         bool Init(Config *conf);
 
-        bool copyDirectory(const char* src, const char* dest);  
-        bool copyFile(const char* src, const char* dest);
+        bool copyDirectory(const char* src, const char* dest, struct stat *attr);  
+        bool copyFile(const char* src, const char* dest, struct stat *attr);
         
         FileHandler() { c = NULL; }
         void Finalize();

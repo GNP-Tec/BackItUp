@@ -60,7 +60,13 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
             cur = strchr(tmp+cur, '/') - tmp;
             if(cur >= 0)
                 tmp[cur] = 0;
-            c->FH->copyDirectory(tmp, tmp);
+
+            if(lstat(tmp, &attr)) {
+                c->log.Log(LogError, "Error getting file stats for <%s>\n\r", tmp);
+                return ;
+            }
+
+            c->FH->copyDirectory(tmp, tmp, &attr);
 
             if(cur < 0)
                 break;
@@ -112,7 +118,6 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
                 strcat(dest, "/");
             strcat(dest, e->d_name);
 
-#warning OPTIMIZE
             struct stat buf;
             if(lstat(src, &buf) < 0) {
                 free(src);
@@ -128,7 +133,7 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
 
             switch(e->d_type) {
                 case DT_DIR: {
-                    c->FH->copyDirectory(src, dest);
+                    c->FH->copyDirectory(src, dest, &buf);
                     FIterator f(c, src, false);
                     #ifdef SIZE
                     size += f.getSize();
@@ -137,11 +142,10 @@ FIterator::FIterator(Config *c, const char* directory, bool isRootDirectory) {
                 }
                 case DT_REG:
                 case DT_LNK:
-                    c->FH->copyFile(src, dest);
+                    c->FH->copyFile(src, dest, &buf);
                     break;                
                 default:
-                    #warning IMPLEMENT
-                    ERRWR_("Not implemented yet\n\r");
+                    c->log.Log(LogWarning, "Filetype not implemented <%s>\n\r", src);
             }
             free(src);
             free(dest);
