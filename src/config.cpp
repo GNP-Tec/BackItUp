@@ -18,6 +18,7 @@
 #include "../inc/fiterator.h"
 #include <sys/stat.h>
 #include <time.h>
+#include <errno.h>
 
 #define ERRWR(x...)    { fprintf(stderr, x); return false; }
 
@@ -77,6 +78,11 @@ bool Config::load(const char* file) {
         ERRWR("Error allocating memory!\n\r");
     xmlFree(prop);
 
+
+    // Is <quiet> set?
+    if(xmlHasProp(cur, (const xmlChar*)"quiet") == NULL)
+        log.addOutput(LogStdout, LogInfo, NULL, 0);
+
     #ifdef DEBUG
     printf("Config version %s\n\r", configversion);
 
@@ -98,8 +104,6 @@ bool Config::load(const char* file) {
                 #endif
 
                 directories.push_back((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
-
-                #warning CHECK EQUIVALENT LOCATIONS (PREVENT DOUBLE BACKUP)
             } else if(strcmp((const char*)cur->name, "destination") == 0) {
                 if(strcmp((const char*)cur->parent->name, "backup") != 0) {
                     ERRWR("The <destination> node must be inside of the <backup> node!\n\r");                
@@ -107,7 +111,6 @@ bool Config::load(const char* file) {
                         
                 if(backup_dest != NULL)
                     ERRWR("Only one backup destination is allowed!\n\r");
-                //backup_dest = strdup((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
                 backup_dest = (char*)malloc(strlen((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1)) + 50);
                 if(backup_dest == NULL) {
                     ERRWR("Error allocating memory!\n\r");
@@ -143,7 +146,6 @@ bool Config::load(const char* file) {
                 log.addOutput(LogFile, LogInfo, (const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1), strlen((const char*)xmlNodeListGetString(doc, cur->xmlChildrenNode, 1)));
             }
     
-#warning Check if EVERYTHING is set correctly      
             #ifdef DEBUG
             for(int i=0; i<lvl; i++)
                 printf("  ");
@@ -165,7 +167,31 @@ bool Config::load(const char* file) {
             #endif
             cur=cur->parent->next;
         }
-        
+    }
+
+    FH = new FileHandler();
+    return true;
+}
+
+bool Config::isValid() {
+    if(backup_dest == NULL || strlen(backup_dest) == 0) {
+        log.Log(LogError, "No backup destination found in config file!\n\r");
+        return false;
+    }
+
+    if(mode == MODE_UNSET) {
+        log.Log(LogError, "No valid backup-mode is choosen!\n\r");
+        return false;
+    }
+
+    if(type == TYPE_UNSET) {
+        log.Log(LogError, "No valid backup-type is choosen!\n\r");
+        return false;
+    }
+
+    if(directories.size() == 0) {
+        log.Log(LogError, "No directories are given!\n\r");
+        return false;
     }
 
     log.Log(LogInfo, "Summary:\n\r\tConfigfile:\t\t%s (v%s)\n\r", configfile, configversion);
@@ -173,18 +199,19 @@ bool Config::load(const char* file) {
     log.Log(LogInfo, "\tMode:\t\t\t%s\n\r", mode == MODE_FULL ? "full" : "??");
     log.Log(LogInfo, "\tType:\t\t\t%s\n\r", type == TYPE_UNCOMPRESSED ? "uncompressed" : (type == TYPE_COMPRESSED ? "compressed" : "??"));
 
-    log.Log(LogInfo, "\n\r\tFolders to save:\n\r");
+    log.Log(LogInfo, "\n\r");
+    log.Log(LogInfo, "\tFolders to save:\n\r");
     for(unsigned int i=0; i<directories.size(); i++) {
-        log.Log(LogInfo, "\t#%i\t%s\n\r", i, directories[i]);
+        log.Log(LogInfo, "\t\t#%i\t%s\n\r", i, directories[i]);
     }
 
-    FH = new FileHandler();
     return true;
 }
 
 void Config::backupDirectories() {
-    if(mkdir(getBackupDestination(), 0755) != 0) {
+    if(mkdir(getBackupDestination(), 0755) != 0 && errno != EEXIST) {
         log.Log(LogError, "Couldn't create directory <%s>\n\r", getBackupDestination());   
+        return ;
     }
 
     char buf[200];

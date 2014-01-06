@@ -26,9 +26,6 @@
 
 #include <errno.h>
 
-#warning REMOVE > LOG
-#define ERRWR(x...)    { fprintf(stderr, x); return false; }
-
 bool FileHandler::Init(Config* conf) {
     if(conf == NULL)
         return false;

@@ -1,4 +1,4 @@
-<config version="1.0">
+<config version="1.0"><!-- add quiet="" to stop logging on stdout-->
     <backup>
         <destination>./bkp</destination>
         <!-- currently just a full backup is supported.. Later there will also be recursive -->

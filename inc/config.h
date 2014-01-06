@@ -61,6 +61,7 @@ class Config {
         FileHandler *FH;
 
         bool load(const char* file);
+        bool isValid();
         void backupDirectories();
 
         const char* getBackupDestination() { return (const char*)backup_dest; }

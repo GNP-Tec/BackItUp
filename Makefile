@@ -1,13 +1,16 @@
 SRC=src/main.cpp src/config.cpp src/fiterator.cpp src/filehandler.cpp
 
+V_MAJ=0
+V_MIN=1
+
 all:
-	g++ -O2 -o backup `xml2-config --cflags` `xml2-config --libs` $(SRC) -llogger -larchive -Wall -g -DDEBUG
+	g++ -O2 -o backup `xml2-config --cflags` `xml2-config --libs` $(SRC) -llogger -larchive -Wall -DV_MAJ=$(V_MAJ) -DV_MIN=$(V_MIN) -g -DDEBUG
 
 profiling:
-	g++ -O2 -o backup `xml2-config --cflags` `xml2-config --libs` $(SRC) -llogger -larchive -Wall -g -pg
+	g++ -O2 -o backup `xml2-config --cflags` `xml2-config --libs` $(SRC) -llogger -larchive -Wall -DV_MAJ=$(V_MAJ) -DV_MIN=$(V_MIN) -g -pg -DPROFILING
 
 release:
-	g++ -O2 -o backup `xml2-config --cflags` `xml2-config --libs` $(SRC) -llogger -larchive -Wall
+	g++ -O2 -o backup `xml2-config --cflags` `xml2-config --libs` $(SRC) -llogger -larchive -Wall -DV_MAJ=$(V_MAJ) -DV_MIN=$(V_MIN)
 	strip -x -s backup
 
 clean:
