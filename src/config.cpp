@@ -16,6 +16,8 @@
 
 #include "../inc/config.h"
 #include "../inc/fiterator.h"
+#include "../inc/rfilehandler.h"
+#include "../inc/cfilehandler.h"
 #include <sys/stat.h>
 #include <time.h>
 #include <errno.h>
@@ -31,6 +33,8 @@ void Config::unload() {
         free(backup_dest);
     if(doc != NULL)
         xmlFreeDoc(doc);
+    if(FH != NULL)
+        delete FH;
 }
 
 void Config::reset() {
@@ -40,6 +44,7 @@ void Config::reset() {
     doc = NULL;
     mode = MODE_UNSET;
     type = TYPE_UNSET;
+    FH = NULL;
 
     while(directories.size() > 0) {
         void* buf = (void*)directories[directories.size()-1];
@@ -169,7 +174,13 @@ bool Config::load(const char* file) {
         }
     }
 
-    FH = new FileHandler();
+    if(type == TYPE_UNCOMPRESSED)
+        FH = new RFileHandler();
+    else if(type == TYPE_COMPRESSED)
+        FH = new CFileHandler();
+    else
+        return false;
+
     return true;
 }
 

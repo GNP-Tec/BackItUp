@@ -8,8 +8,8 @@
  *
  **************************************************
  * DESCRIPTION:
- * Simplifies the access to regular files and 
- * archives
+ * Simplifies the access to regular files, 
+ * archives, ...
  *************************************************/
 
 #ifndef _FILEHANDLER_H_
@@ -25,14 +25,15 @@ class Config;
 
 class FileHandler {
     public:
-        bool Init(Config *conf);
+        virtual bool Init(Config *conf) { return false; };
 
-        bool copyDirectory(const char* src, const char* dest, struct stat *attr);  
-        bool copyFile(const char* src, const char* dest, struct stat *attr);
+        virtual bool copyDirectory(const char* src, const char* dest, struct stat *attr) { return false; };
+        virtual bool copyFile(const char* src, const char* dest, struct stat *attr) { return false; };
         
+        virtual void Finalize() {};
+
         FileHandler() { c = NULL; }
-        void Finalize();
-    private:
+    protected:
         Config *c;
         struct archive *a;
 };

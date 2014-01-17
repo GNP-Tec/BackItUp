@@ -50,8 +50,10 @@ int main(int argc, char** argv) {
                 return 1;
             }
             Config c;
-            if(!c.load(argv[2]) || !c.isValid())
+            if(!c.load(argv[2]) || !c.isValid()) {
+                ERR("Error loading config file <%s>!\n\r", argv[2]);
                 return 1;
+            }
 
             c.backupDirectories();
         } else if(strncmp(argv[1], "version", strlen("version")+1) == 0) {
