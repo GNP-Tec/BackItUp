@@ -13,13 +13,16 @@
  *************************************************/
 
 #include <stdio.h>
-#include <string.h>
+#include "../inc/BackItUp.h"
 
-#include <libxml/parser.h>
-#include <libxml/xmlmemory.h>
+int main(int argc, char** argv) {
+    BackItUp b(argc, argv);
+    /*Config c;
+    c.Load(argv[1]);
+    c.Validate();*/
+}
 
-#include "../inc/config.h"
-#include "../inc/fiterator.h"
+#if 0
 
 #define ERR(x...)   {fprintf(stderr, x);}
 
@@ -56,6 +59,19 @@ int main(int argc, char** argv) {
             }
 
             c.backupDirectories();
+        } else if(strncmp(argv[1], "verify", strlen("verify")+1) == 0) {
+#warning one more parameter (bkp file!);
+            if(argc < 3) {
+                ERR("No config file is passed!\n\r\n\rusage: %s verify [config-file]\n\r", argv[0]);
+                return 1;
+            }
+            Config c;
+            if(!c.load(argv[2]) || !c.isValid()) {
+                ERR("Error loading config file <%s>!\n\r", argv[2]);
+                return 1;
+            }
+
+            c.verifyBackup();
         } else if(strncmp(argv[1], "version", strlen("version")+1) == 0) {
             printf("BackItUp v%i.%i %s\n\rCopyright (c) 2014 GNP-Tec.net, Philipp Doblhofer\n\r", V_MAJ, V_MIN, V_TYPE);
             return 0;
@@ -80,3 +96,5 @@ int main(int argc, char** argv) {
     return 0;
 #endif
 }
+
+#endif
