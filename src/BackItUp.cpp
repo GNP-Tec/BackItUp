@@ -90,6 +90,23 @@ BackItUp::BackItUp(int argc, char** argv) {
             exit(1);
         }
 
+        struct stat attr;
+        if(lstat(argv[2], &attr)<0) {
+            Log.Log(LogError, "Error getting file information <%s>!\n\r", argv[2]);
+            return ;        
+        }
+
+        Backup *b = NULL;
+        if((attr.st_mode & S_IFMT) == S_IFDIR) {
+            b = new RegularBackup(this);
+        } else {
+            b = new CompressedBackup(this);
+        }
+
+        b->OpenBackup(argv[2]);
+        b->GetFileTree();
+        b->CloseBackup();
+
         exit(0);
     } else if(strncmp(argv[1], "getconfig", strlen("getconfig")+1)==0) {
         Log.addOutput(LogStdout, LogInfo, NULL, 0);

@@ -22,6 +22,8 @@
 #include <utime.h>
 #include <dirent.h>
 
+#warning ADD "files" TO ARCHIVE!
+
 bool CompressedBackup::OpenBackup(const char* path) {
     root_file = (char*)malloc(strlen(path) + 30);
     if(root_file == NULL) {

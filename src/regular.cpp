@@ -56,6 +56,43 @@ bool RegularBackup::PrintConfig() {
     return true;
 }
 
+FileTree RegularBackup::GetFileTree() {
+    char* ptr = root_dir + strlen(root_dir);
+    strcat(root_dir, "/files");
+    
+    int sfd;
+    
+    if((sfd = open(root_dir, O_RDONLY))<0) {
+        Log.Log(LogError, "Error opening file <%s>\n", root_dir);
+        return ft;
+    }
+
+
+    struct stat attr;
+    unsigned int s;
+    char *name; 
+
+    while(1) {
+        if(read(sfd, &attr, sizeof(struct stat))<=0) break;
+        if(read(sfd, &s, sizeof(size_t))<=0) break;
+        name = (char*)malloc(s + 10);
+        if(name == NULL) {
+            Log.Log(LogError, "Error allocating memory!\n");
+            continue;
+        }
+        if(read(sfd, name, s)<=0) break;
+        name[s] = 0;
+        //printf("%s\n", name);
+        ft.addEntry(name, attr);
+        free(name);
+    }
+
+    close(sfd);
+     
+    *ptr = 0;
+    return ft;
+}
+
 bool RegularBackup::CloseBackup() {    
     free(root_dir);
     return true;
@@ -293,9 +330,4 @@ bool RegularBackup::addFolder(const char* path, bool init) {
     }
 
     return true;
-}
-
-FileTree RegularBackup::getFileTree(const char* path) {
-    FileTree ft;
-    return ft;
 }

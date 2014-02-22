@@ -34,12 +34,12 @@ class RegularBackup : public Backup {
 
         bool OpenBackup(const char* path);
         bool PrintConfig();
+        FileTree GetFileTree();
         bool CloseBackup();
        
         bool Initialize();
         bool Finalize();
         bool addFolder(const char* path, bool init=true);
-        FileTree getFileTree(const char* path);
         // compare
 };
 

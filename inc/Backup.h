@@ -25,12 +25,12 @@ class Backup {
     
         virtual bool OpenBackup(const char* path) { return false; };
         virtual bool PrintConfig() { return false; };
+        virtual FileTree GetFileTree() { FileTree f; return f; }
         virtual bool CloseBackup() { return false; };
 
         virtual bool Initialize() { return false; };
         virtual bool Finalize() { return false; };
         virtual bool addFolder(const char* path, bool init=true) { return false; };
-        virtual FileTree getFileTree(const char* path) { FileTree f; return f; }
         // compare
 };
 
