@@ -22,6 +22,51 @@
 #include <utime.h>
 #include <dirent.h>
 
+bool CompressedBackup::OpenBackup(const char* path) {
+    root_file = (char*)malloc(strlen(path) + 30);
+    if(root_file == NULL) {
+        Log.Log(LogError, "Error allocating memory!\n");
+        return false;
+    }
+
+    strcpy(root_file, path);   
+    return true;
+}
+
+bool CompressedBackup::PrintConfig() {
+    struct archive *a;
+    struct archive_entry *entry;
+
+    a = archive_read_new();
+    archive_read_support_filter_all(a);
+    archive_read_support_format_all(a);
+    if(archive_read_open_filename(a, root_file, 10240) != ARCHIVE_OK) {
+        Log.Log(LogError, "Error opening archive <%s>\n", root_file);
+        return false;
+    }
+    while(archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        if(strcmp("config.xml", archive_entry_pathname(entry)) == 0) {
+
+            char *buf = (char*)malloc(archive_entry_size(entry));
+            archive_read_data(a, buf, archive_entry_size(entry));
+
+            puts(buf);
+            break;
+        }
+        archive_read_data_skip(a);
+    }
+    if (archive_read_free(a) != ARCHIVE_OK)
+        return false;
+
+    return true;
+}
+
+bool CompressedBackup::CloseBackup() {    
+    free(root_file);
+    return true;
+}
+
+
 bool CompressedBackup::Initialize() {
     // create backup directory
     root_file = (char*)malloc(strlen(b->c.GetDestination())+20+10); // + <date> + "data"/"config.xml"/...
@@ -62,11 +107,6 @@ bool CompressedBackup::Initialize() {
     archive_entry_set_pathname(entry, "data");
     archive_entry_set_perm(entry, 0777);
     archive_entry_set_filetype(entry, AE_IFDIR);
-    /*archive_entry_set_size(entry, attr.st_size);
-    archive_entry_set_perm(entry, attr.st_mode & 0777);
-    archive_entry_set_mtime(entry, attr.st_mtime, 0);
-    archive_entry_set_uid(entry, attr.st_uid);
-    archive_entry_set_gid(entry, attr.st_gid);*/
     if(archive_write_header(a, entry) != ARCHIVE_OK) {
         archive_entry_free(entry);
         Log.Log(LogError, "Error creating directory in archive <%s>\n\r", "data");
@@ -77,6 +117,7 @@ bool CompressedBackup::Initialize() {
 
     strcpy(root_file, "config.xml");
     copyFile(b->GetConfigFile(), root_file);
+
     return true;
 }
 
@@ -147,6 +188,7 @@ bool CompressedBackup::copyFile(const char* src, const char* dest) {
 bool CompressedBackup::Finalize() {
     archive_write_close(a);
     archive_write_free(a);
+    free(root_file);
     return true;
 }
 
@@ -186,6 +228,7 @@ bool CompressedBackup::addFolder(const char* path, bool init) {
                 strcat(src, "/");
             strcat(src, e->d_name);
 
+#warning UTF8 (Umlaute) in Compressed and regular
             char* dest = (char*)malloc(sizeof(char)*(strlen(path)+strlen(e->d_name)+10));
             if(dest == NULL) {
                 Log.Log(LogError, "Error allocating memory!\n");

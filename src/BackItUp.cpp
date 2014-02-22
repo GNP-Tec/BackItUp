@@ -36,7 +36,7 @@ void BackItUp::usage(char* pgm) {
     ERR("!\tbackup    <backup>\t\tMake a recursive backup\n");
     ERR("!\trestore   <backup>\t\tRestore a backup\n");
     ERR("!\tverify    <backup>\t\tVerifies a backup\n");
-    ERR("!\tgetconfig <backup>\t\tPrints the config of a backup\n");
+    ERR("\tgetconfig <backup>\t\tPrints the config of a backup\n");
     ERR("\tcheck     <config>\t\tValidate a config file\n");
     ERR("\tversion           \t\tGet the current version\n");
 }
@@ -83,6 +83,39 @@ BackItUp::BackItUp(int argc, char** argv) {
             b->addFolder(c.GetNextBackupDirectory());
         b->Finalize();
         
+    } else if(strncmp(argv[1], "verify", strlen("verify")+1)==0) {
+        Log.addOutput(LogStdout, LogInfo, NULL, 0);
+        if(argc != 3) {
+            usage(*argv);
+            exit(1);
+        }
+
+        exit(0);
+    } else if(strncmp(argv[1], "getconfig", strlen("getconfig")+1)==0) {
+        Log.addOutput(LogStdout, LogInfo, NULL, 0);
+        if(argc != 3) {
+            usage(*argv);
+            exit(1);
+        }
+
+        struct stat attr;
+        if(lstat(argv[2], &attr)<0) {
+            Log.Log(LogError, "Error getting file information <%s>!\n\r", argv[2]);
+            return ;        
+        }
+
+        Backup *b = NULL;
+        if((attr.st_mode & S_IFMT) == S_IFDIR) {
+            b = new RegularBackup(this);
+        } else {
+            b = new CompressedBackup(this);
+        }
+
+        b->OpenBackup(argv[2]);
+        b->PrintConfig();
+        b->CloseBackup();
+
+        exit(0);
     } else if(strncmp(argv[1], "version", strlen("version")+1)==0) {
         version();
         exit(0);
@@ -101,7 +134,7 @@ BackItUp::BackItUp(int argc, char** argv) {
         } else {
             Log.Log(LogError, "<%s> is an invalid config file!\n", argv[2]);
             exit(1);
-        }
+        }  
     } else {
         usage(*argv);
         exit(1);

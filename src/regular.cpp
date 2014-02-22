@@ -23,6 +23,44 @@
 #include <utime.h>
 #include <dirent.h>
 
+bool RegularBackup::OpenBackup(const char* path) {
+    root_dir = (char*)malloc(strlen(path) + 30);
+    if(root_dir == NULL) {
+        Log.Log(LogError, "Error allocating memory!\n");
+        return false;
+    }
+
+    strcpy(root_dir, path);
+   
+    return true;
+}
+
+bool RegularBackup::PrintConfig() {
+    char* ptr = root_dir + strlen(root_dir);
+    strcat(root_dir, "/config.xml");
+    
+    FILE *fd = fopen(root_dir, "r");
+    if(fd == NULL) {
+        Log.Log(LogError, "Error opening config file <%s>\n", root_dir);
+        return false;
+    }
+    
+    char c;
+    while((c = fgetc(fd)) && !feof(fd)) {
+        putchar(c);
+    }
+
+    fclose(fd);
+
+    *ptr = 0;
+    return true;
+}
+
+bool RegularBackup::CloseBackup() {    
+    free(root_dir);
+    return true;
+}
+
 bool RegularBackup::Initialize() {
     // create backup directory
     root_dir = (char*)malloc(strlen(b->c.GetDestination())+20+10); // + <date> + "data"/"config.xml"/...
@@ -78,6 +116,8 @@ bool RegularBackup::copyFile(const char* src, const char* dest) {
         Log.Log(LogError, "Error getting file information <%s>!\n\r", src);
         return false;
     }
+
+    ft.addEntry(src, attr);
 
     if((attr.st_mode & S_IFMT) == S_IFREG) {
         if((sfd = open(src, O_RDONLY))<0) {
@@ -153,6 +193,25 @@ bool RegularBackup::copyFile(const char* src, const char* dest) {
 }
 
 bool RegularBackup::Finalize() {
+    int dfd;
+
+    char* ptr = root_dir + strlen(root_dir);
+    strcat(ptr, "files");
+    printf("PTR: %s\n", root_dir);
+
+    if((dfd = creat(root_dir, 0777))<0) {
+        Log.Log(LogError, "Error creating file <%s>\n", root_dir);
+        return false;
+    }
+
+    char *s;
+    while((s = (char*)ft.getNextSerializedElement()) != NULL) {
+        unsigned int size = sizeof(struct stat) + (size_t)(*((size_t*)(s+sizeof(struct stat))) + sizeof(size_t));
+        write(dfd, s, size);
+    }
+
+    close(dfd);   
+    free(root_dir);
     return true;
 }
 
@@ -234,4 +293,9 @@ bool RegularBackup::addFolder(const char* path, bool init) {
     }
 
     return true;
+}
+
+FileTree RegularBackup::getFileTree(const char* path) {
+    FileTree ft;
+    return ft;
 }

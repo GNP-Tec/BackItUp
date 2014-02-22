@@ -27,10 +27,13 @@ class CompressedBackup : public Backup {
         struct archive *a;
     
         bool copyFile(const char* src, const char* dest);
-
     public: 
         CompressedBackup(BackItUp *ptr) : Backup(ptr) {
         }
+       
+        bool OpenBackup(const char* path);
+        bool PrintConfig();
+        bool CloseBackup();
        
         bool Initialize();
         bool Finalize();

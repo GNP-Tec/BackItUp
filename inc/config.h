@@ -68,43 +68,4 @@ class Config {
     
 };
 
-
-
-/*
-class Config {
-    private:
-        xmlDocPtr doc;
-        char* configfile;
-        char* configversion;
-
-        void unload();
-        void reset();
-
-        char* backup_dest;
-        BCK_MODE mode; 
-        BCK_TYPE type;
-
-        vector<const char*> directories;
-    public:
-        Logger log;
-        FileHandler *FH;
-
-        bool load(const char* file);
-        bool isValid();
-        void backupDirectories();
-        void verifyBackup();
-
-        const char* getBackupDestination() { return (const char*)backup_dest; }
-    
-        BCK_TYPE getType() { return type; }
-    
-        Config() {
-            reset();
-        }
-
-        ~Config() {
-            unload();
-        }
-};*/
-
 #endif

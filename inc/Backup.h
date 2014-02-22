@@ -15,6 +15,7 @@
 #define _BACKUP_H_
 
 #include "../inc/BackItUp.h"
+#include "../inc/FileTree.h"
 
 class Backup {
     protected:
@@ -22,10 +23,14 @@ class Backup {
     public:
         Backup(BackItUp *ptr) { b = ptr; }    
     
-        virtual bool Initialize(/*...*/) { return false; };
-        virtual bool Finalize(/*...*/) { return false; };
+        virtual bool OpenBackup(const char* path) { return false; };
+        virtual bool PrintConfig() { return false; };
+        virtual bool CloseBackup() { return false; };
+
+        virtual bool Initialize() { return false; };
+        virtual bool Finalize() { return false; };
         virtual bool addFolder(const char* path, bool init=true) { return false; };
-        // getFileTree
+        virtual FileTree getFileTree(const char* path) { FileTree f; return f; }
         // compare
 };
 

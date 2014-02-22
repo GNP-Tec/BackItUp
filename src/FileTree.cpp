@@ -1,20 +1,14 @@
 /**************************************************
- * FILENAME:        main.cpp
+ * FILENAME:        FileTree.cpp
  * PROJECT:         BackItUp
  *
  * AUTHOR:          Philipp Doblhofer
  * WEB:             www.gnp-tec.net
- * START DATE:      2013-Dec-29
+ * START DATE:      2014-Feb-01
  *
  **************************************************
  * DESCRIPTION:
- * Main program, which initiates the process of
- * the backup. (Read config, start copying, ...)
+ * FileTree class
  *************************************************/
 
-#include <stdio.h>
-#include "../inc/BackItUp.h"
-
-int main(int argc, char** argv) {
-    BackItUp b(argc, argv);
-}
+#include "../inc/FileTree.h"

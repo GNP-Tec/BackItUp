@@ -1,4 +1,4 @@
-SRC=src/main.cpp src/BackItUp.cpp src/config.cpp src/regular.cpp src/compressed.cpp
+SRC=src/main.cpp src/BackItUp.cpp src/config.cpp src/regular.cpp src/compressed.cpp src/FileTree.cpp
 
 V_MAJ=0
 V_MIN=2

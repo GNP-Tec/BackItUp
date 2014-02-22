@@ -16,6 +16,7 @@
 
 #include "../inc/Backup.h"
 #include "../inc/BackItUp.h"
+#include "../inc/FileTree.h"
 
 #include <stdio.h>
 
@@ -25,14 +26,20 @@ class RegularBackup : public Backup {
     
         bool copyFile(const char* src, const char* dest);
 
+        FileTree ft;
+
     public: 
         RegularBackup(BackItUp *ptr) : Backup(ptr) {
         }
+
+        bool OpenBackup(const char* path);
+        bool PrintConfig();
+        bool CloseBackup();
        
         bool Initialize();
         bool Finalize();
         bool addFolder(const char* path, bool init=true);
-        // getFileTree
+        FileTree getFileTree(const char* path);
         // compare
 };
 
