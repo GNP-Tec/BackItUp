@@ -21,7 +21,7 @@
 #define ERRWR(x...)                 { fprintf(stderr, x); return false; }
 
 #define XML_CMP_NODE(ptr, str)      (strcmp((const char*)ptr->name, str)==0)
-#define XML_GET_TEXT(doc, ptr)      ((const char*)xmlNodeListGetString(doc, ptr->xmlChildrenNode, 1))
+#define XML_GET_TEXT(doc, ptr)      ((char*)xmlNodeListGetString(doc, ptr->xmlChildrenNode, 1))
 
 bool Config::Load(const char* cfg, bool file) {
     xmlDocPtr   doc = NULL;
@@ -71,40 +71,46 @@ bool Config::Load(const char* cfg, bool file) {
             #ifdef DEBUG
             Log.Log(LogInfo, "%s\n", (const char*)cur->name);
             #endif
+
+            char* str;
             
             if(XML_CMP_NODE(cur, "log")) {
                 if(!XML_CMP_NODE(cur->parent, "backup")) {
                     xmlFreeDoc(doc);
                     ERRWR("The <log> node must be inside of <backup>!\n");
                 }
-                if(XML_GET_TEXT(doc, cur) != NULL)
-                    Log.addOutput(LogFile, LogInfo, XML_GET_TEXT(doc, cur), strlen(XML_GET_TEXT(doc, cur)));
+                if((str = XML_GET_TEXT(doc, cur)) != NULL) {
+                    Log.addOutput(LogFile, LogInfo, str, strlen(str));
+                    free(str);
+                }
             } else if(XML_CMP_NODE(cur, "destination")) {
                 if(!XML_CMP_NODE(cur->parent, "backup")) {
                     xmlFreeDoc(doc);
                     ERRWR("The <destination> node must be inside of <backup>!\n");
                 }
-                if(XML_GET_TEXT(doc, cur) != NULL)
-                    destination = strdup(XML_GET_TEXT(doc, cur));
+                if((str = XML_GET_TEXT(doc, cur)) != NULL) {
+                    destination = str;
+                }
             } else if(XML_CMP_NODE(cur, "type")) {
                 if(!XML_CMP_NODE(cur->parent, "backup")) {
                     xmlFreeDoc(doc);
                     ERRWR("The <type> node must be inside of <backup>!\n");
                 }
-                if(XML_GET_TEXT(doc, cur) == NULL)
+                if((str = XML_GET_TEXT(doc, cur)) == NULL)
                     continue;
-                if(strcmp(XML_GET_TEXT(doc, cur), "regular") == 0)
+                if(strcmp(str, "regular") == 0)
                     type = TYPE_REGULAR;
-                if(strcmp(XML_GET_TEXT(doc, cur), "compressed") == 0)
+                if(strcmp(str, "compressed") == 0)
                     type = TYPE_COMPRESSED;
+                free(str);
             } else if(XML_CMP_NODE(cur, "directory")) {
                 if(!XML_CMP_NODE(cur->parent, "directories")) {
                     xmlFreeDoc(doc);
                     ERRWR("A <directory> node must be inside of <directories>!\n");
                 }
-                if(XML_GET_TEXT(doc, cur) == NULL)
+                if((str = XML_GET_TEXT(doc, cur)) == NULL)
                     continue;
-                dir.push_back(XML_GET_TEXT(doc, cur));
+                dir.push_back(str);
             } else if(XML_CMP_NODE(cur, "backup")) {
                 //#warning delete
             } else if(XML_CMP_NODE(cur, "directories")) {

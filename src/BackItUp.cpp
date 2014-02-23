@@ -35,7 +35,7 @@ void BackItUp::usage(char* pgm) {
     ERR("\tbackup    <config>\t\tInitiate a backup as\n\t\t\t\t\tconfigured in a config file\n");
     ERR("!\tbackup    <backup>\t\tMake a recursive backup\n");
     ERR("!\trestore   <backup>\t\tRestore a backup\n");
-    ERR("!\tverify    <backup>\t\tVerifies a backup\n");
+    ERR("\tverify    <backup>\t\tVerifies a backup\n");
     ERR("\tgetconfig <backup>\t\tPrints the config of a backup\n");
     ERR("\tcheck     <config>\t\tValidate a config file\n");
     ERR("\tversion           \t\tGet the current version\n");
@@ -104,7 +104,9 @@ BackItUp::BackItUp(int argc, char** argv) {
         }
 
         b->OpenBackup(argv[2]);
-        c.Load(b->GetConfig(), false);
+        char *buf = b->GetConfig();
+        c.Load(buf, false);
+        free(buf);
         b->Compare();
         b->CloseBackup();
 

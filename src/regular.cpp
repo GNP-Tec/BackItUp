@@ -31,6 +31,9 @@ bool RegularBackup::OpenBackup(const char* path) {
     }
 
     strcpy(root_dir, path);
+
+    if(root_dir[strlen(root_dir)-1] != '/')
+        strcat(root_dir, "/");
    
     return true;
 }
@@ -93,17 +96,11 @@ bool RegularBackup::Compare() {
 
 #warning check return
     while(b->c.IsNextBackupDirectory()) {
-        //printf(b->c.GetNextBackupDirectory());
         addFolder(b->c.GetNextBackupDirectory(), true, false);
     }
 
-    //ft.print();
     ft_bkp.compare(&ft);
-
-    printf("\n");
-    ft_bkp.print();
-    printf("\n");
-    ft.print();
+    ft_bkp.printChanges(&ft);
     return true;
 }
 
@@ -372,6 +369,7 @@ bool RegularBackup::addFolder(const char* path, bool init, bool copy) {
                 copyFile(dest + strlen(root_dir) + 4, dest, copy);
                 *ptr++ = '/';
             }
+
             init = false;
 
             copyFile(src, dest, copy);
