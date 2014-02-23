@@ -104,7 +104,8 @@ BackItUp::BackItUp(int argc, char** argv) {
         }
 
         b->OpenBackup(argv[2]);
-        b->GetFileTree();
+        c.Load(b->GetConfig(), false);
+        b->Compare();
         b->CloseBackup();
 
         exit(0);

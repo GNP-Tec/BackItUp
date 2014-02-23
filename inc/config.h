@@ -56,7 +56,7 @@ class Config {
                 free(destination);
         };    
 
-        bool Load(const char* cfg);
+        bool Load(const char* cfg, bool file=true);
         bool Validate(void);
 
         const char* GetDestination() { return destination; };

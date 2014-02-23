@@ -56,7 +56,59 @@ bool RegularBackup::PrintConfig() {
     return true;
 }
 
+char* RegularBackup::GetConfig() {
+    char* ptr = root_dir + strlen(root_dir);
+    strcat(root_dir, "/config.xml");
+    
+    FILE *fd = fopen(root_dir, "r");
+    if(fd == NULL) {
+        Log.Log(LogError, "Error opening config file <%s>\n", root_dir);
+        return NULL;
+    }
+
+    struct stat attr;
+
+    if(lstat(root_dir, &attr) < 0) {
+        Log.Log(LogError, "Error getting file information <%s>!\n\r", root_dir);
+        return NULL;
+    }
+
+    char *buf = (char*)malloc(attr.st_size + 1);
+    char *ptr2 = buf;
+    
+    while((*ptr2 = fgetc(fd)) && !feof(fd)) {
+        ptr2++;
+    }
+    *ptr2 = 0;
+    //puts(buf);
+
+    fclose(fd);
+
+    *ptr = 0;
+    return buf;
+}
+
+bool RegularBackup::Compare() {
+    FileTree ft_bkp = GetFileTree();
+
+#warning check return
+    while(b->c.IsNextBackupDirectory()) {
+        //printf(b->c.GetNextBackupDirectory());
+        addFolder(b->c.GetNextBackupDirectory(), true, false);
+    }
+
+    //ft.print();
+    ft_bkp.compare(&ft);
+
+    printf("\n");
+    ft_bkp.print();
+    printf("\n");
+    ft.print();
+    return true;
+}
+
 FileTree RegularBackup::GetFileTree() {
+    FileTree ft_ret;
     char* ptr = root_dir + strlen(root_dir);
     strcat(root_dir, "/files");
     
@@ -64,7 +116,7 @@ FileTree RegularBackup::GetFileTree() {
     
     if((sfd = open(root_dir, O_RDONLY))<0) {
         Log.Log(LogError, "Error opening file <%s>\n", root_dir);
-        return ft;
+        return ft_ret;
     }
 
 
@@ -83,14 +135,14 @@ FileTree RegularBackup::GetFileTree() {
         if(read(sfd, name, s)<=0) break;
         name[s] = 0;
         //printf("%s\n", name);
-        ft.addEntry(name, attr);
+        ft_ret.addEntry(name, attr);
         free(name);
     }
 
     close(sfd);
      
     *ptr = 0;
-    return ft;
+    return ft_ret;
 }
 
 bool RegularBackup::CloseBackup() {    
@@ -137,17 +189,19 @@ bool RegularBackup::Initialize() {
 
     // Copy config  
     strcat(root_dir, "config.xml");
-    copyFile(b->GetConfigFile() ,root_dir);
+    copyFile(b->GetConfigFile(), root_dir);
+    ft.reset();
     *ptr = 0;
 
     return true;
 }
 
-bool RegularBackup::copyFile(const char* src, const char* dest) {
+bool RegularBackup::copyFile(const char* src, const char* dest, bool copy) {
     int sfd, dfd;
     struct stat attr;
 
-    Log.Log(LogInfo, "Copying <%s> to <%s>\n", src, dest);
+    if(copy)
+        Log.Log(LogInfo, "Copying <%s> to <%s>\n", src, dest);
 
     if(lstat(src, &attr) < 0) {
         Log.Log(LogError, "Error getting file information <%s>!\n\r", src);
@@ -155,6 +209,9 @@ bool RegularBackup::copyFile(const char* src, const char* dest) {
     }
 
     ft.addEntry(src, attr);
+
+    if(!copy)
+        return true;
 
     if((attr.st_mode & S_IFMT) == S_IFREG) {
         if((sfd = open(src, O_RDONLY))<0) {
@@ -252,7 +309,7 @@ bool RegularBackup::Finalize() {
     return true;
 }
 
-bool RegularBackup::addFolder(const char* path, bool init) {
+bool RegularBackup::addFolder(const char* path, bool init, bool copy) {
     if(path == NULL || strlen(path) == 0)
         return false;
 
@@ -312,13 +369,13 @@ bool RegularBackup::addFolder(const char* path, bool init) {
                 ptr += strchr(ptr, '/') - ptr;
                 *ptr = 0;
                 //Log.Log(LogInfo, "D: %s %s\n", dest + strlen(root_dir) + 4, dest); 
-                copyFile(dest + strlen(root_dir) + 4, dest);
+                copyFile(dest + strlen(root_dir) + 4, dest, copy);
                 *ptr++ = '/';
             }
             init = false;
 
-            copyFile(src, dest);
-            addFolder(src, false);
+            copyFile(src, dest, copy);
+            addFolder(src, false, copy);
 
             free(src);
             free(dest);

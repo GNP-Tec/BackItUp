@@ -15,6 +15,7 @@
  *************************************************/
 
 #include "../inc/config.h"
+#include <string.h>
 
 // printf to stderr with negative return
 #define ERRWR(x...)                 { fprintf(stderr, x); return false; }
@@ -22,7 +23,7 @@
 #define XML_CMP_NODE(ptr, str)      (strcmp((const char*)ptr->name, str)==0)
 #define XML_GET_TEXT(doc, ptr)      ((const char*)xmlNodeListGetString(doc, ptr->xmlChildrenNode, 1))
 
-bool Config::Load(const char* cfg) {
+bool Config::Load(const char* cfg, bool file) {
     xmlDocPtr   doc = NULL;
     xmlNodePtr  cur = NULL;
     xmlChar*    prop = NULL;
@@ -30,7 +31,10 @@ bool Config::Load(const char* cfg) {
     if(cfg == NULL || *cfg == '\0')
         ERRWR("Invalid filename!\n\r");
 
-    doc = xmlParseFile(cfg);
+    if(file)
+        doc = xmlParseFile(cfg);
+    else
+        doc = xmlParseMemory(cfg, strlen(cfg));
     if(doc == NULL)
         ERRWR("Error parsing config file <%s>!\n\r", cfg);
     
