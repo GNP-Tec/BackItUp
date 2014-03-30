@@ -30,6 +30,10 @@
 
 Logger Log;
 
+
+#warning VERIFY FOR COMPRESSED FILES!!
+#warning TYPE_ENCRYPTED
+
 void BackItUp::usage(char* pgm) {
     ERR("Usage: %s\n", pgm);
     ERR("\tbackup    <config>\t\tInitiate a backup as\n\t\t\t\t\tconfigured in a config file\n");
@@ -59,30 +63,56 @@ BackItUp::BackItUp(int argc, char** argv) {
         #warning check if parameter is a config or backup (recursive)
         configPath = argv[2];
 
-        if(!c.Load(argv[2])) {
-            Log.Log(LogError, "<%s> is an invalid config file!\n", argv[2]);
-            exit(1);
-        }
-        if(!c.Validate()) {
-            Log.Log(LogError, "<%s> is an invalid config file!\n", argv[2]);
-            exit(1);
-        }
+        if(strcmp(configPath + strlen(configPath) - 4, ".xml") == 0) {
+            if(!c.Load(argv[2])) {
+                Log.Log(LogError, "<%s> is an invalid config file!\n", argv[2]);
+                exit(1);
+            }
+            if(!c.Validate()) {
+                Log.Log(LogError, "<%s> is an invalid config file!\n", argv[2]);
+                exit(1);
+            }
 
-        Backup *b = NULL;
-        if(c.GetBackupType() == TYPE_REGULAR)
-            b = new RegularBackup(this);
-        else if(c.GetBackupType() == TYPE_COMPRESSED)
-            b = new CompressedBackup(this);
-    #warning ERR MESG
-        if(b==NULL)
-            exit(1);
+            Backup *b = NULL;
+            if(c.GetBackupType() == TYPE_REGULAR)
+                b = new RegularBackup(this);
+            else if(c.GetBackupType() == TYPE_COMPRESSED)
+                b = new CompressedBackup(this);
+        #warning ERR MESG
+            if(b==NULL)
+                exit(1);
 
-#warning check return
-        b->Initialize();
-        while(c.IsNextBackupDirectory())
-            b->addFolder(c.GetNextBackupDirectory());
-        b->Finalize();
-        
+    #warning check return
+            b->Initialize();
+            while(c.IsNextBackupDirectory())
+                b->addFolder(c.GetNextBackupDirectory());
+            b->Finalize();
+        } else {
+            struct stat attr;
+            if(lstat(configPath, &attr) < 0) {
+                fprintf(stderr , "Error getting file information <%s>!\n\r", configPath);
+                return ;
+            }
+
+            Backup *b = NULL;
+            if((attr.st_mode & S_IFMT) == S_IFDIR)
+                b = new RegularBackup(this);
+            else if((attr.st_mode & S_IFMT) == S_IFREG)
+                b = new CompressedBackup(this);
+            #warning ERR MESG
+            if(b==NULL)
+                exit(1);
+
+            b->OpenBackup(argv[2]);
+            char *buf = b->GetConfig();
+            c.Load(buf, false);
+            free(buf);
+            b->Compare();
+            b->CloseBackup();
+
+            exit(0);
+        }
+            
     } else if(strncmp(argv[1], "verify", strlen("verify")+1)==0) {
         Log.addOutput(LogStdout, LogInfo, NULL, 0);
         if(argc != 3) {

@@ -23,11 +23,9 @@
 class RegularBackup : public Backup {
     private:
         char *root_dir;
+        FileTree ft;
     
         bool copyFile(const char* src, const char* dest, bool copy=true);
-
-        FileTree ft;
-
     public: 
         RegularBackup(BackItUp *ptr) : Backup(ptr) {
         }
@@ -42,7 +40,6 @@ class RegularBackup : public Backup {
         bool Initialize();
         bool Finalize();
         bool addFolder(const char* path, bool init=true, bool copy=true);
-        // compare
 };
 
 #endif

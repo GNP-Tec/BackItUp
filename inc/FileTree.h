@@ -39,6 +39,7 @@ class FileTree {
         bool addEntry(const char* name, struct stat attr);
         const char* serialize(FileTreeElement *pPtr);
         const char* getNextSerializedElement();
+        unsigned long getSerializedSize();
         void reset();
         FileTreeElement* getNextElement(bool reset=false);
         FileTreeElement* FindByName(char* name);

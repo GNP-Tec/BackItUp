@@ -33,7 +33,6 @@ typedef enum _bkp_type {
     TYPE_UNSET, 
     TYPE_REGULAR,
     TYPE_COMPRESSED
-#warning TYPE_ENCRYPTED
 } BackupType;
 
 class Config {

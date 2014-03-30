@@ -124,6 +124,17 @@ const char* FileTree::getNextSerializedElement() {
     return s;
 }
 
+unsigned long FileTree::getSerializedSize() {
+    unsigned long size = 0;
+
+    FileTreeElement *pTmp = pRoot;
+    while(pTmp != NULL) {
+        size += sizeof(struct stat) + strlen(pTmp->Name) + sizeof(size_t);
+        pTmp = pTmp->pNext;
+    }
+    return size;
+}
+
 bool FileTree::compare(FileTree *o) {
     FileTreeElement* ptr_o;
     bool ret = true;
@@ -169,6 +180,7 @@ bool FileTree::compare(FileTree *o) {
 void FileTree::printChanges(FileTree *o) {
     FileTreeElement* ptr_o;
     o->getNextElement(true);
+
     while((ptr_o = o->getNextElement()) != NULL) {
         FileTreeElement *ptr_l = FindByName(ptr_o->Name);
 

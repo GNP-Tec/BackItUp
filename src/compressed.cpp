@@ -63,6 +63,85 @@ bool CompressedBackup::PrintConfig() {
     return true;
 }
 
+
+char* CompressedBackup::GetConfig() {
+    struct archive *a;
+    struct archive_entry *entry;
+    char *buf = NULL;
+
+    a = archive_read_new();
+    archive_read_support_filter_all(a);
+    archive_read_support_format_all(a);
+    if(archive_read_open_filename(a, root_file, 10240) != ARCHIVE_OK) {
+        Log.Log(LogError, "Error opening archive <%s>\n", root_file);
+        return false;
+    }
+    while(archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        if(strcmp("config.xml", archive_entry_pathname(entry)) == 0) {
+
+            buf = (char*)malloc(archive_entry_size(entry));
+            archive_read_data(a, buf, archive_entry_size(entry));
+
+            break;
+        }
+        archive_read_data_skip(a);
+    }
+    if (archive_read_free(a) != ARCHIVE_OK)
+        return NULL;
+}
+
+bool CompressedBackup::Compare() {
+    FileTree ft_bkp = GetFileTree();
+
+#warning check return
+    while(b->c.IsNextBackupDirectory()) {
+        addFolder(b->c.GetNextBackupDirectory(), true, false);
+    }
+
+    ft_bkp.compare(&ft);
+    ft_bkp.printChanges(&ft);
+    return true;
+}
+
+FileTree CompressedBackup::GetFileTree() {
+    FileTree ft_ret;
+#warning IMPLEMENT
+    /*char* ptr = root_dir + strlen(root_dir);
+    strcat(root_dir, "/files");
+    
+    int sfd;
+    
+    if((sfd = open(root_dir, O_RDONLY))<0) {
+        Log.Log(LogError, "Error opening file <%s>\n", root_dir);
+        return ft_ret;
+    }
+
+
+    struct stat attr;
+    unsigned int s;
+    char *name; 
+
+    while(1) {
+        if(read(sfd, &attr, sizeof(struct stat))<=0) break;
+        if(read(sfd, &s, sizeof(size_t))<=0) break;
+        name = (char*)malloc(s + 10);
+        if(name == NULL) {
+            Log.Log(LogError, "Error allocating memory!\n");
+            continue;
+        }
+        if(read(sfd, name, s)<=0) break;
+        name[s] = 0;
+        //printf("%s\n", name);
+        ft_ret.addEntry(name, attr);
+        free(name);
+    }
+
+    close(sfd);
+     
+    *ptr = 0;*/
+    return ft_ret;
+}
+
 bool CompressedBackup::CloseBackup() {    
     free(root_file);
     return true;
@@ -119,6 +198,7 @@ bool CompressedBackup::Initialize() {
 
     strcpy(root_file, "config.xml");
     copyFile(b->GetConfigFile(), root_file);
+    ft.reset();
 
     return true;
 }
@@ -135,6 +215,7 @@ bool CompressedBackup::copyFile(const char* src, const char* dest) {
         Log.Log(LogError, "Error getting file information <%s>!\n\r", src);
         return false;
     }
+    ft.addEntry(src, attr);
 
     struct archive_entry *entry;
 
@@ -188,13 +269,36 @@ bool CompressedBackup::copyFile(const char* src, const char* dest) {
 }
 
 bool CompressedBackup::Finalize() {
+    struct archive_entry *entry;
+
+    entry = archive_entry_new();
+    if(entry == NULL) {
+        Log.Log(LogError, "Error creating file in archive <%s>\n\r", "files");
+        return false;
+    }
+    archive_entry_set_pathname(entry, "files");    
+    archive_entry_set_size(entry, ft.getSerializedSize());
+    archive_entry_set_perm(entry, 0777);
+    archive_entry_set_filetype(entry, AE_IFREG);
+
+    if(archive_write_header(a, entry) != ARCHIVE_OK) {
+        Log.Log(LogError, "Error creating file in archive <%s>\n\r", "files");
+        return false;
+    }
+
+    char *s;
+    while((s = (char*)ft.getNextSerializedElement()) != NULL) {
+        unsigned int size = sizeof(struct stat) + (size_t)(*((size_t*)(s+sizeof(struct stat))) + sizeof(size_t));
+        archive_write_data(a, s, size);
+    }
+    archive_entry_free(entry);
+
     archive_write_close(a);
     archive_write_free(a);
-    free(root_file);
     return true;
 }
 
-bool CompressedBackup::addFolder(const char* path, bool init) {
+bool CompressedBackup::addFolder(const char* path, bool init, bool copy) {
     if(path == NULL || strlen(path) == 0)
         return false;
 
