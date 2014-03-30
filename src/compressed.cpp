@@ -22,8 +22,6 @@
 #include <utime.h>
 #include <dirent.h>
 
-#warning ADD "files" TO ARCHIVE!
-
 bool CompressedBackup::OpenBackup(const char* path) {
     root_file = (char*)malloc(strlen(path) + 30);
     if(root_file == NULL) {
@@ -74,7 +72,7 @@ char* CompressedBackup::GetConfig() {
     archive_read_support_format_all(a);
     if(archive_read_open_filename(a, root_file, 10240) != ARCHIVE_OK) {
         Log.Log(LogError, "Error opening archive <%s>\n", root_file);
-        return false;
+        return NULL;
     }
     while(archive_read_next_header(a, &entry) == ARCHIVE_OK) {
         if(strcmp("config.xml", archive_entry_pathname(entry)) == 0) {
@@ -88,12 +86,12 @@ char* CompressedBackup::GetConfig() {
     }
     if (archive_read_free(a) != ARCHIVE_OK)
         return NULL;
+    return buf;
 }
 
 bool CompressedBackup::Compare() {
     FileTree ft_bkp = GetFileTree();
 
-#warning check return
     while(b->c.IsNextBackupDirectory()) {
         addFolder(b->c.GetNextBackupDirectory(), true, false);
     }
@@ -105,40 +103,43 @@ bool CompressedBackup::Compare() {
 
 FileTree CompressedBackup::GetFileTree() {
     FileTree ft_ret;
-#warning IMPLEMENT
-    /*char* ptr = root_dir + strlen(root_dir);
-    strcat(root_dir, "/files");
-    
-    int sfd;
-    
-    if((sfd = open(root_dir, O_RDONLY))<0) {
-        Log.Log(LogError, "Error opening file <%s>\n", root_dir);
+
+    struct archive *a;
+    struct archive_entry *entry;
+
+    a = archive_read_new();
+    archive_read_support_filter_all(a);
+    archive_read_support_format_all(a);
+    if(archive_read_open_filename(a, root_file, 10240) != ARCHIVE_OK) {
+        Log.Log(LogError, "Error opening archive <%s>\n", root_file);
         return ft_ret;
     }
-
 
     struct stat attr;
     unsigned int s;
     char *name; 
 
-    while(1) {
-        if(read(sfd, &attr, sizeof(struct stat))<=0) break;
-        if(read(sfd, &s, sizeof(size_t))<=0) break;
-        name = (char*)malloc(s + 10);
-        if(name == NULL) {
-            Log.Log(LogError, "Error allocating memory!\n");
-            continue;
+    while(archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+        if(strcmp("files", archive_entry_pathname(entry)) == 0) {
+            while(1) {
+                if(archive_read_data(a, &attr, sizeof(struct stat))<=0) break;
+                if(archive_read_data(a, &s, sizeof(size_t))<=0) break;
+                name = (char*)malloc(s + 10);
+                if(name == NULL) {
+                    Log.Log(LogError, "Error allocating memory!\n");
+                    continue;
+                }
+                if(archive_read_data(a, name, s)<=0) break;
+                name[s] = 0;
+                ft_ret.addEntry(name, attr);
+                free(name);
+            }
+            break;
         }
-        if(read(sfd, name, s)<=0) break;
-        name[s] = 0;
-        //printf("%s\n", name);
-        ft_ret.addEntry(name, attr);
-        free(name);
+        archive_read_data_skip(a);
     }
-
-    close(sfd);
-     
-    *ptr = 0;*/
+    if (archive_read_free(a) != ARCHIVE_OK)
+        return ft_ret;
     return ft_ret;
 }
 
@@ -203,19 +204,23 @@ bool CompressedBackup::Initialize() {
     return true;
 }
 
-bool CompressedBackup::copyFile(const char* src, const char* dest) {
+bool CompressedBackup::copyFile(const char* src, const char* dest, bool copy) {
     char buf[8192];
     int len;
     int sfd;
     struct stat attr;
 
-    Log.Log(LogInfo, "Copying <%s> to <%s>\n", src, dest);
+    if(copy)
+        Log.Log(LogInfo, "Copying <%s> to <%s>\n", src, dest);
 
     if(lstat(src, &attr) < 0) {
         Log.Log(LogError, "Error getting file information <%s>!\n\r", src);
         return false;
     }
     ft.addEntry(src, attr);
+
+    if(!copy)
+        return true;
 
     struct archive_entry *entry;
 
@@ -355,13 +360,13 @@ bool CompressedBackup::addFolder(const char* path, bool init, bool copy) {
             while(init && *ptr != 0 && strchr(ptr, '/') != NULL) {
                 ptr += strchr(ptr, '/') - ptr;
                 *ptr = 0;
-                copyFile(dest + 4, dest);
+                copyFile(dest + 4, dest, copy);
                 *ptr++ = '/';
             }
             init = false;
 
-            copyFile(src, dest);
-            addFolder(src, false);
+            copyFile(src, dest, copy);
+            addFolder(src, false, copy);
 
             free(src);
             free(dest);

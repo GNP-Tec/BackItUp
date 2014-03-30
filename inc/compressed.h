@@ -28,7 +28,7 @@ class CompressedBackup : public Backup {
         struct archive *a;
         FileTree ft;
     
-        bool copyFile(const char* src, const char* dest);
+        bool copyFile(const char* src, const char* dest, bool copy=true);
     public: 
         CompressedBackup(BackItUp *ptr) : Backup(ptr) {
         }

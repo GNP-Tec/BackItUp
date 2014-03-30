@@ -30,14 +30,12 @@
 
 Logger Log;
 
-
-#warning VERIFY FOR COMPRESSED FILES!!
 #warning TYPE_ENCRYPTED
 
 void BackItUp::usage(char* pgm) {
     ERR("Usage: %s\n", pgm);
     ERR("\tbackup    <config>\t\tInitiate a backup as\n\t\t\t\t\tconfigured in a config file\n");
-    ERR("!\tbackup    <backup>\t\tMake a recursive backup\n");
+    ERR("!\tbackup    <backup>\t\tMake an incremential backup\n");
     ERR("!\trestore   <backup>\t\tRestore a backup\n");
     ERR("\tverify    <backup>\t\tVerifies a backup\n");
     ERR("\tgetconfig <backup>\t\tPrints the config of a backup\n");
@@ -60,7 +58,6 @@ BackItUp::BackItUp(int argc, char** argv) {
             usage(*argv);
             exit(1);
         }
-        #warning check if parameter is a config or backup (recursive)
         configPath = argv[2];
 
         if(strcmp(configPath + strlen(configPath) - 4, ".xml") == 0) {
@@ -78,15 +75,25 @@ BackItUp::BackItUp(int argc, char** argv) {
                 b = new RegularBackup(this);
             else if(c.GetBackupType() == TYPE_COMPRESSED)
                 b = new CompressedBackup(this);
-        #warning ERR MESG
-            if(b==NULL)
+            
+            if(b==NULL) {
+                Log.Log(LogError, "Error initialising backup!\n");
                 exit(1);
+            }
 
-    #warning check return
-            b->Initialize();
+            if(!b->Initialize()) {
+                Log.Log(LogError, "Error initialising backup!\n");
+                if(!b->Finalize())
+                    Log.Log(LogError, "Error finalizing backup!\n");
+                exit(1);
+            }
             while(c.IsNextBackupDirectory())
                 b->addFolder(c.GetNextBackupDirectory());
-            b->Finalize();
+
+            if(!b->Finalize()) {
+                Log.Log(LogError, "Error finalizing backup!\n");
+                exit(1);
+            }
         } else {
             struct stat attr;
             if(lstat(configPath, &attr) < 0) {
@@ -99,20 +106,22 @@ BackItUp::BackItUp(int argc, char** argv) {
                 b = new RegularBackup(this);
             else if((attr.st_mode & S_IFMT) == S_IFREG)
                 b = new CompressedBackup(this);
-            #warning ERR MESG
-            if(b==NULL)
+
+            if(b==NULL) {
+                Log.Log(LogError, "Error initialising backup!\n");
                 exit(1);
+            }
 
             b->OpenBackup(argv[2]);
             char *buf = b->GetConfig();
             c.Load(buf, false);
             free(buf);
             b->Compare();
+#warning CREATE INCREMENTIAL BACKUP
             b->CloseBackup();
 
             exit(0);
-        }
-            
+        }            
     } else if(strncmp(argv[1], "verify", strlen("verify")+1)==0) {
         Log.addOutput(LogStdout, LogInfo, NULL, 0);
         if(argc != 3) {

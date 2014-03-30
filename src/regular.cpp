@@ -94,7 +94,6 @@ char* RegularBackup::GetConfig() {
 bool RegularBackup::Compare() {
     FileTree ft_bkp = GetFileTree();
 
-#warning check return
     while(b->c.IsNextBackupDirectory()) {
         addFolder(b->c.GetNextBackupDirectory(), true, false);
     }
@@ -286,23 +285,26 @@ bool RegularBackup::copyFile(const char* src, const char* dest, bool copy) {
 bool RegularBackup::Finalize() {
     int dfd;
 
-    char* ptr = root_dir + strlen(root_dir);
-    strcat(ptr, "files");
-    printf("PTR: %s\n", root_dir);
+    if(root_dir != NULL) {
+        char* ptr = root_dir + strlen(root_dir);
+        strcat(ptr, "files");
+        printf("PTR: %s\n", root_dir);
 
-    if((dfd = creat(root_dir, 0777))<0) {
-        Log.Log(LogError, "Error creating file <%s>\n", root_dir);
-        return false;
+        if((dfd = creat(root_dir, 0777))<0) {
+            Log.Log(LogError, "Error creating file <%s>\n", root_dir);
+            free(root_dir);
+            return false;
+        }
+
+        char *s;
+        while((s = (char*)ft.getNextSerializedElement()) != NULL) {
+            unsigned int size = sizeof(struct stat) + (size_t)(*((size_t*)(s+sizeof(struct stat))) + sizeof(size_t));
+            write(dfd, s, size);
+        }
+
+        close(dfd);   
+        free(root_dir);
     }
-
-    char *s;
-    while((s = (char*)ft.getNextSerializedElement()) != NULL) {
-        unsigned int size = sizeof(struct stat) + (size_t)(*((size_t*)(s+sizeof(struct stat))) + sizeof(size_t));
-        write(dfd, s, size);
-    }
-
-    close(dfd);   
-    free(root_dir);
     return true;
 }
 
